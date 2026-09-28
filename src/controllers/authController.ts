@@ -5,10 +5,7 @@ import prisma from "../prisma.js";
 import { AuthRequest } from "../middlewares/authMiddleware.js";
 import { JWT_EXPIRES_IN, JWT_SECRET } from "../config.js";
 import { sendWelcomeEmail } from "../services/sendMail.js";
-
-if (!JWT_SECRET) {
-  throw new Error("JWT_SECRET não configurado no ambiente.");
-}
+import { AppError } from "../middlewares/errorHandler.js";
 
 // ======================================
 // CADASTRO
@@ -54,18 +51,18 @@ export async function loginUsuario(
 
     // Usuário inexistente
   if (!usuario) {
-    return res.status(401).json({ erro: "E-mail ou senha incorretos." });
+      throw new AppError(401, "E-mail ou senha incorretos.");
   }
 
   if (perfil && usuario.perfil !== perfil) {
-    return res.status(401).json({ erro: "As credenciais não pertencem ao perfil selecionado." });
+      throw new AppError(401, "As credenciais não pertencem ao perfil selecionado.");
   }
 
     // Compara senha digitada com o HASH armazenado
   const senhaValida = await bcrypt.compare(senha, usuario.senha);
 
   if (!senhaValida) {
-    return res.status(401).json({ erro: "E-mail ou senha incorretos." });
+    throw new AppError(401, "E-mail ou senha incorretos.");
   }
 
     // Cria o JWT

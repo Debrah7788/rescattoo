@@ -4,13 +4,21 @@ import morgan from "morgan";
 
 import gatoRoutes from "./routes/gatoRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
-import { errorHandler } from "./middlewares/errorHandler.js";
+import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.js";
+import { CORS_ORIGINS } from "./config.js";
 
 const app = express();
 
 app.use(express.json());
 
-app.use(cors());
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || CORS_ORIGINS.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(null, false);
+  }
+}));
 
 app.use(morgan("dev"));
 
@@ -26,6 +34,7 @@ app.use(authRoutes);
 // Rotas de gatos
 app.use(gatoRoutes);
 
+app.use(notFoundHandler);
 app.use(errorHandler);
 
 const PORT = Number(process.env.PORT || 3000);

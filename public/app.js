@@ -3,8 +3,10 @@
 // ======================================
 
 let idEditando = null;
+let idGatoAdocao = null;
 let secaoAtual = "inicio";
 const historicoNavegacao = [];
+let toastTimeout;
 
 const token = () => localStorage.getItem("rescatto_token");
 
@@ -46,20 +48,34 @@ function mostrarMensagem(id, mensagem) {
 
 function mostrarToast(mensagem, tipo = "sucesso") {
     const toast = document.getElementById("toast");
+    window.clearTimeout(toastTimeout);
     toast.textContent = mensagem;
     toast.className = tipo === "erro" ? "erro" : "";
     toast.hidden = false;
-    window.setTimeout(() => { toast.hidden = true; }, 4000);
+    toastTimeout = window.setTimeout(() => { toast.hidden = true; }, 4000);
 }
 
-async function mensagemErro(resposta, padrao) {
+function escaparHtml(valor) {
+    return String(valor).replace(/[&<>"']/g, caractere => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    })[caractere]);
+}
+
+async function mensagemErro(resposta, padrao, formulario = document) {
     try {
         const dados = await resposta.json();
         if (dados.issues?.length) {
             dados.issues.forEach(issue => {
                 const nomeCampo = issue.path.split(".").pop();
-                const campo = document.querySelector(`[name="${nomeCampo}"]`);
-                if (campo) campo.setCustomValidity(issue.message);
+                const campo = formulario.querySelector(`[name="${nomeCampo}"]`);
+                if (campo) {
+                    campo.setCustomValidity(issue.message);
+                    campo.reportValidity();
+                }
             });
             return dados.issues.map(issue => `${issue.path}: ${issue.message}`).join(" ");
         }
@@ -115,9 +131,11 @@ window.voltar = function () {
 // ======================================
 
 document
-    .getElementById("formCadastro")
-    .querySelectorAll("input")
-    .forEach(campo => campo.addEventListener("input", () => campo.setCustomValidity("")));
+    .querySelectorAll("form [name]")
+    .forEach(campo => {
+        campo.addEventListener("input", () => campo.setCustomValidity(""));
+        campo.addEventListener("change", () => campo.setCustomValidity(""));
+    });
 
 document
     .querySelectorAll("[data-formulario]")
@@ -138,6 +156,8 @@ document
         const contato = document.getElementById("cadastroContato").value.trim();
         const senha = document.getElementById("cadastroSenha").value;
         const confirmacao = document.getElementById("cadastroConfirmacao").value;
+        const campoContato = document.getElementById("cadastroContato");
+        const campoSenha = document.getElementById("cadastroSenha");
         const emailValido = /^(?!.*\.\.)[a-z0-9](?:[a-z0-9._%+-]*[a-z0-9])?@gmail\.com$/i.test(contato);
         const senhaValida = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,72}$/.test(senha);
 
@@ -150,11 +170,15 @@ document
         }
 
         if (!emailValido) {
-            mostrarMensagem("erroCadastro", "Informe um e-mail Gmail válido, como nome@gmail.com.");
+            campoContato.setCustomValidity("Informe um e-mail Gmail válido, como nome@gmail.com.");
+            campoContato.reportValidity();
+            mostrarToast(campoContato.validationMessage, "erro");
             return;
         }
         if (!senhaValida) {
-            mostrarMensagem("erroCadastro", "A senha deve ter de 8 a 72 caracteres, com maiúscula, minúscula e número.");
+            campoSenha.setCustomValidity("A senha deve ter de 8 a 72 caracteres, com maiúscula, minúscula e número.");
+            campoSenha.reportValidity();
+            mostrarToast(campoSenha.validationMessage, "erro");
             return;
         }
         const headers = { "Content-Type": "application/json" };
@@ -183,7 +207,7 @@ document
         }
 
         if (!resposta.ok) {
-            const mensagem = await mensagemErro(resposta, "Não foi possível criar a conta.");
+            const mensagem = await mensagemErro(resposta, "Não foi possível criar a conta.", this);
             mostrarMensagem("erroCadastro", mensagem);
             mostrarToast(mensagem, "erro");
             return;
@@ -219,29 +243,39 @@ document
         const perfil = document.querySelector("[data-login-perfil].ativa").dataset.loginPerfil;
         const contato = document.getElementById("loginContato").value.trim();
         const senha = document.getElementById("loginSenha").value;
+        const campoContato = document.getElementById("loginContato");
+        const campoSenha = document.getElementById("loginSenha");
 
         mostrarMensagem("erroLogin", "");
         if (!/^(?!.*\.\.)[a-z0-9](?:[a-z0-9._%+-]*[a-z0-9])?@gmail\.com$/i.test(contato)) {
-            mostrarMensagem("erroLogin", "Informe um e-mail Gmail válido, como nome@gmail.com.");
+            campoContato.setCustomValidity("Informe um e-mail Gmail válido, como nome@gmail.com.");
+            campoContato.reportValidity();
+            mostrarToast(campoContato.validationMessage, "erro");
             return;
         }
         if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,72}$/.test(senha)) {
-            mostrarMensagem("erroLogin", "A senha deve ter de 8 a 72 caracteres, com maiúscula, minúscula e número.");
+            campoSenha.setCustomValidity("A senha deve ter de 8 a 72 caracteres, com maiúscula, minúscula e número.");
+            campoSenha.reportValidity();
+            mostrarToast(campoSenha.validationMessage, "erro");
             return;
         }
 
-        const resposta = await fetch("/auth/login", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                contato,
-                senha,
-                perfil
-            })
-        });
+        let resposta;
+        try {
+            resposta = await fetch("/auth/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ contato, senha, perfil })
+            });
+        } catch {
+            const mensagem = "Não foi possível conectar ao servidor.";
+            mostrarMensagem("erroLogin", mensagem);
+            mostrarToast(mensagem, "erro");
+            return;
+        }
 
         if (!resposta.ok) {
-            const mensagem = await mensagemErro(resposta, "E-mail ou senha incorretos.");
+            const mensagem = await mensagemErro(resposta, "E-mail ou senha incorretos.", this);
             mostrarMensagem("erroLogin", mensagem);
             mostrarToast(mensagem, "erro");
             return;
@@ -263,7 +297,9 @@ document
             }
         } catch (erro) {
             limparSessao();
-            mostrarMensagem("erroLogin", "Login realizado, mas a sessão não foi validada. Reinicie o servidor e tente novamente.");
+            const mensagem = "Login realizado, mas a sessão não foi validada. Faça login novamente.";
+            mostrarMensagem("erroLogin", mensagem);
+            mostrarToast(mensagem, "erro");
         }
     });
 
@@ -323,7 +359,7 @@ document
 
                 });
 
-                if (!resposta.ok) throw new Error(await mensagemErro(resposta, "Não foi possível cadastrar o gato."));
+                if (!resposta.ok) throw new Error(await mensagemErro(resposta, "Não foi possível cadastrar o gato.", this));
 
             }
 
@@ -342,7 +378,7 @@ document
 
                 });
 
-                if (!resposta.ok) throw new Error(await mensagemErro(resposta, "Não foi possível atualizar o gato."));
+                if (!resposta.ok) throw new Error(await mensagemErro(resposta, "Não foi possível atualizar o gato.", this));
 
                 idEditando = null;
 
@@ -351,14 +387,14 @@ document
             this.reset();
             mostrar("painelAdmin");
             carregarGatosAdmin();
+            mostrarToast("Gato salvo com sucesso.");
 
         }
 
         catch (erro) {
 
             console.error(erro);
-
-            alert("Erro ao salvar gato.");
+            mostrarToast(erro instanceof Error ? erro.message : "Erro ao salvar gato.", "erro");
 
         }
 
@@ -408,15 +444,15 @@ async function carregarGatos() {
                     <img src="${imagem}" alt="Gato">
 
                     <h3>
-                        ${gato.nome_gato}
+                        ${escaparHtml(gato.nome_gato)}
                     </h3>
 
                     <p>
-                        ${gato.idade} • ${gato.sexo}
+                        ${escaparHtml(gato.idade)} • ${escaparHtml(gato.sexo)}
                     </p>
 
                     <p>
-                        ${gato.cor}
+                        ${escaparHtml(gato.cor)}
                     </p>
 
                     <button
@@ -437,8 +473,7 @@ async function carregarGatos() {
     catch (erro) {
 
         console.error(erro);
-
-        alert("Erro ao carregar gatos.");
+        mostrarToast(erro instanceof Error ? erro.message : "Erro ao carregar gatos.", "erro");
 
     }
 
@@ -488,22 +523,22 @@ async function carregarGatosAdmin() {
                         alt="Gato">
 
                     <h3>
-                        ${gato.nome_gato}
+                        ${escaparHtml(gato.nome_gato)}
                     </h3>
 
                     <p>
                         <strong>Idade:</strong>
-                        ${gato.idade}
+                        ${escaparHtml(gato.idade)}
                     </p>
 
                     <p>
                         <strong>Sexo:</strong>
-                        ${gato.sexo}
+                        ${escaparHtml(gato.sexo)}
                     </p>
 
                     <p>
                         <strong>Cor:</strong>
-                        ${gato.cor}
+                        ${escaparHtml(gato.cor)}
                     </p>
 
                     <br>
@@ -534,8 +569,7 @@ async function carregarGatosAdmin() {
     catch (erro) {
 
         console.error(erro);
-
-        alert("Erro ao carregar gatos.");
+        mostrarToast(erro instanceof Error ? erro.message : "Erro ao carregar gatos.", "erro");
 
     }
 
@@ -552,6 +586,10 @@ window.editar = async function (id) {
 
         const resposta =
             await fetch(`/gatos/${id}`, { headers: cabecalhoAutenticado() });
+
+        if (!resposta.ok) {
+            throw new Error(await mensagemErro(resposta, "Não foi possível buscar o gato."));
+        }
 
         const gato =
             await resposta.json();
@@ -597,8 +635,7 @@ window.editar = async function (id) {
     catch (erro) {
 
         console.error(erro);
-
-        alert("Erro ao buscar gato.");
+        mostrarToast(erro instanceof Error ? erro.message : "Erro ao buscar gato.", "erro");
 
     }
 
@@ -630,7 +667,7 @@ window.excluir = async function (id) {
             throw new Error(await mensagemErro(resposta, "Não foi possível excluir o gato."));
         }
 
-        alert("Gato excluído com sucesso!");
+        mostrarToast("Gato excluído com sucesso.");
 
         carregarGatosAdmin();
 
@@ -639,8 +676,7 @@ window.excluir = async function (id) {
     catch (erro) {
 
         console.error(erro);
-
-        alert("Erro ao excluir gato.");
+        mostrarToast(erro instanceof Error ? erro.message : "Erro ao excluir gato.", "erro");
 
     }
 
@@ -660,8 +696,17 @@ window.escolherGato = async function (id, imagem) {
                 headers: cabecalhoAutenticado()
             });
 
+        if (!resposta.ok) {
+            throw new Error(await mensagemErro(resposta, "Não foi possível carregar o gato."));
+        }
+
         const gato =
             await resposta.json();
+
+        idGatoAdocao = id;
+        const usuario = JSON.parse(localStorage.getItem("rescatto_usuario") || "null");
+        document.getElementById("adocaoSolicitanteNome").textContent = usuario?.nome || "";
+        document.getElementById("adocaoSolicitanteContato").textContent = usuario?.contato || "";
 
         document
             .getElementById("imgGato")
@@ -686,8 +731,7 @@ window.escolherGato = async function (id, imagem) {
     catch (erro) {
 
         console.error(erro);
-
-        alert("Erro ao carregar o gato.");
+        mostrarToast(erro instanceof Error ? erro.message : "Erro ao carregar o gato.", "erro");
 
     }
 
@@ -700,13 +744,42 @@ window.escolherGato = async function (id, imagem) {
 
 document
     .getElementById("formAdocao")
-    .addEventListener("submit", function (e) {
+    .addEventListener("submit", async function (e) {
 
         e.preventDefault();
 
-        alert("Solicitação enviada com sucesso!");
+        const formulario = new FormData(this);
+        const dados = {
+            telefone: String(formulario.get("telefone") || ""),
+            cidade: String(formulario.get("cidade") || ""),
+            tipo_moradia: String(formulario.get("tipo_moradia") || ""),
+            tela_protecao: formulario.get("tela_protecao") === "true",
+            outros_animais: formulario.get("outros_animais") === "true",
+            justificativa: String(formulario.get("justificativa") || "").trim(),
+            termo_aceito: formulario.get("termo_aceito") === "on"
+        };
 
-        mostrar("gatos");
+        try {
+            const resposta = await fetch(`/gatos/${idGatoAdocao}/solicitacoes-adocao`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    ...cabecalhoAutenticado()
+                },
+                body: JSON.stringify(dados)
+            });
+
+            if (!resposta.ok) {
+                throw new Error(await mensagemErro(resposta, "Não foi possível enviar a solicitação.", this));
+            }
+
+            this.reset();
+            idGatoAdocao = null;
+            mostrarToast("Solicitação de adoção registrada.");
+            mostrar("gatos");
+        } catch (erro) {
+            mostrarToast(erro instanceof Error ? erro.message : "Não foi possível enviar a solicitação.", "erro");
+        }
 
     });
 
@@ -779,36 +852,28 @@ document
 
         };
 
-        const resposta = await fetch(`/gatos/${idEditando}`, {
+        try {
+            const resposta = await fetch(`/gatos/${idEditando}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    ...cabecalhoAutenticado()
+                },
+                body: JSON.stringify(gato)
+            });
 
-            method: "PUT",
+            if (!resposta.ok) {
+                throw new Error(await mensagemErro(resposta, "Não foi possível atualizar o gato.", this));
+            }
 
-            headers: {
-
-                "Content-Type": "application/json",
-                ...cabecalhoAutenticado()
-
-            },
-
-            body: JSON.stringify(gato)
-
-        });
-
-        if (!resposta.ok) {
-            alert(await mensagemErro(resposta, "Não foi possível atualizar o gato."));
-            return;
+            idEditando = null;
+            this.reset();
+            mostrarToast("Gato atualizado com sucesso.");
+            mostrar("painelAdmin");
+            carregarGatosAdmin();
+            carregarGatos();
+        } catch (erro) {
+            mostrarToast(erro instanceof Error ? erro.message : "Não foi possível atualizar o gato.", "erro");
         }
-
-        alert("Gato atualizado com sucesso!");
-
-        idEditando = null;
-
-        this.reset();
-
-        mostrar("painelAdmin");
-
-        carregarGatosAdmin();
-
-        carregarGatos();
 
     });

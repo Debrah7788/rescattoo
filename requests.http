@@ -1,6 +1,7 @@
 @baseUrl = http://localhost:3000
 @token = COLAR_TOKEN_APOS_LOGIN
 @adminKey = CONFIGURAR_NO_ENV
+@gatoId = INFORMAR_ID_DE_GATO_EXISTENTE
 
 ### Cadastro válido: dispara e-mail de boas-vindas
 POST {{baseUrl}}/auth/register
@@ -57,6 +58,16 @@ Authorization: Bearer {{token}}
 GET {{baseUrl}}/gatos?pagina=0&limite=101
 Authorization: Bearer {{token}}
 
+### Body de gato invalido: 400 com os campos e motivos
+POST {{baseUrl}}/gatos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome_gato": "   ",
+  "idade": "filhote"
+}
+
 ### Recurso inexistente: 404
 GET {{baseUrl}}/gatos/999999
 Authorization: Bearer {{token}}
@@ -75,6 +86,36 @@ Content-Type: application/json
 GET {{baseUrl}}/gatos
 Authorization: Bearer {{token}}
 
+### Solicitacao de adocao invalida: 400
+POST {{baseUrl}}/gatos/{{gatoId}}/solicitacoes-adocao
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "telefone": "1",
+  "cidade": "",
+  "tipo_moradia": "casa",
+  "tela_protecao": true,
+  "outros_animais": false,
+  "justificativa": "curta",
+  "termo_aceito": false
+}
+
+### Solicitacao de adocao valida: 201
+POST {{baseUrl}}/gatos/{{gatoId}}/solicitacoes-adocao
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "telefone": "+55 83 99999-9999",
+  "cidade": "Joao Pessoa",
+  "tipo_moradia": "apartamento",
+  "tela_protecao": true,
+  "outros_animais": false,
+  "justificativa": "Tenho tempo, espaco e condicoes para cuidar do gato.",
+  "termo_aceito": true
+}
+
 ### JSON malformado: 400
 POST {{baseUrl}}/auth/register
 Content-Type: application/json
@@ -82,5 +123,5 @@ Content-Type: application/json
 {"nome":"JSON quebrado"
 
 ### Teste de falha SMTP (execução manual)
-# Inicie temporariamente com SMTP_HOST=127.0.0.1 SMTP_PORT=1 NODE_ENV=production.
+# Inicie com JWT_SECRET contendo ao menos 32 caracteres e SMTP_HOST=127.0.0.1 SMTP_PORT=1 SMTP_USER=teste SMTP_PASS=teste NODE_ENV=production.
 # O cadastro deve continuar respondendo 201 e o terminal deve registrar a falha.

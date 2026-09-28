@@ -521,7 +521,7 @@
 
         <form id="formCadastro">
 
-                <input type="text" id="cadastroNome" name="nome" placeholder="Nome" minlength="2" required>
+            <input type="text" id="cadastroNome" name="nome" placeholder="Nome" minlength="2" maxlength="100" required>
 
                 <input type="email" id="cadastroContato" name="contato" placeholder="nome@gmail.com" maxlength="254" pattern="^[^\s@]+@gmail\.com$" required>
 
@@ -529,9 +529,9 @@
 
                 <input type="password" id="cadastroConfirmacao" name="confirmacao" placeholder="Confirme a senha" minlength="8" maxlength="72" required>
 
-                <input type="text" id="cadastroEndereco" placeholder="Cidade / endereço">
+                <input type="text" id="cadastroEndereco" name="endereco" placeholder="Cidade / endereço" maxlength="200">
 
-                <input type="password" id="adminKey" placeholder="Chave administrativa (apenas admin)" autocomplete="off">
+                <input type="password" id="adminKey" name="x-admin-key" placeholder="Chave administrativa (apenas admin)" autocomplete="off">
 
                 <p id="erroCadastro" role="alert"></p>
                 <button type="submit">Criar conta</button>
@@ -550,8 +550,8 @@
             <button type="button" class="aba" data-login-perfil="admin" role="tab">Administrador</button>
         </div>
         <form id="formLogin">
-            <input type="email" id="loginContato" placeholder="nome@gmail.com" maxlength="254" pattern="^[^\s@]+@gmail\.com$" required>
-            <input type="password" id="loginSenha" placeholder="Senha" minlength="8" maxlength="72" required>
+            <input type="email" id="loginContato" name="contato" placeholder="nome@gmail.com" maxlength="254" pattern="^[^\s@]+@gmail\.com$" required>
+            <input type="password" id="loginSenha" name="senha" placeholder="Senha" minlength="8" maxlength="72" required>
             <p id="erroLogin" role="alert"></p>
             <button type="submit">Entrar</button>
         </form>
@@ -584,14 +584,14 @@
     <h2>Cadastrar gato</h2>
 
     <form id="formGato">
-        <input type="text" id="nomeGato" placeholder="Nome do gato" required>
-        <input type="text" id="idade" placeholder="Idade" required>
-        <input type="text" id="sexo" placeholder="Sexo" required>
-        <input type="text" id="cor" placeholder="Cor" required>
-        <input type="text" id="porte" placeholder="Porte" required>
-        <input type="text" id="temperamento" placeholder="Temperamento">
-        <input type="text" id="status" placeholder="Status" required>
-        <input type="text" id="historico" placeholder="Histórico de tratamento">
+        <input type="text" id="nomeGato" name="nome_gato" placeholder="Nome do gato" maxlength="120" required>
+        <input type="text" id="idade" name="idade" placeholder="Idade" maxlength="120" required>
+        <input type="text" id="sexo" name="sexo" placeholder="Sexo" maxlength="120" required>
+        <input type="text" id="cor" name="cor" placeholder="Cor" maxlength="120" required>
+        <input type="text" id="porte" name="porte" placeholder="Porte" maxlength="120" required>
+        <input type="text" id="temperamento" name="temperamento" placeholder="Temperamento" maxlength="500">
+        <input type="text" id="status" name="status" placeholder="Status" maxlength="120" required>
+        <input type="text" id="historico" name="historico_tratamento" placeholder="Histórico de tratamento" maxlength="1000">
         <button type="submit">Cadastrar gato</button>
     </form>
 
@@ -610,48 +610,64 @@
         <input
             type="text"
             id="editarNome"
+            name="nome_gato"
             placeholder="Nome do gato"
+            maxlength="120"
             required>
 
         <input
             type="text"
             id="editarIdade"
+            name="idade"
             placeholder="Idade"
+            maxlength="120"
             required>
 
         <input
             type="text"
             id="editarSexo"
+            name="sexo"
             placeholder="Sexo"
+            maxlength="120"
             required>
 
         <input
             type="text"
             id="editarCor"
+            name="cor"
             placeholder="Cor"
+            maxlength="120"
             required>
 
         <input
             type="text"
             id="editarPorte"
+            name="porte"
             placeholder="Porte"
+            maxlength="120"
             required>
 
         <input
             type="text"
             id="editarTemperamento"
-            placeholder="Temperamento">
+            name="temperamento"
+            placeholder="Temperamento"
+            maxlength="500">
 
         <input
             type="text"
             id="editarStatus"
+            name="status"
             placeholder="Status"
+            maxlength="120"
             required>
 
         <input
             type="text"
             id="editarHistorico"
-            placeholder="Histórico de tratamento">
+            name="historico_tratamento"
+            placeholder="Histórico de tratamento"
+            maxlength="1000">
 
         <button type="submit">
             Salvar alterações
@@ -716,25 +732,9 @@
 
 
         <form id="formAdocao">
-
-            <input
-                type="text"
-                placeholder="Nome Completo"
-                required>
-
-            <input
-                type="email"
-                placeholder="Email"
-                required>
-
-            <input
-                type="text"
-                placeholder="Telefone">
-
-            <input
-                type="text"
-                placeholder="Cidade / Bairro"
-                required>
+            <p>Solicitante: <strong id="adocaoSolicitanteNome"></strong> (<span id="adocaoSolicitanteContato"></span>)</p>
+            <input type="tel" name="telefone" placeholder="Telefone" minlength="8" maxlength="20" pattern="^[+()0-9 .-]+$" autocomplete="tel" required>
+            <input type="text" name="cidade" placeholder="Cidade / Bairro" minlength="2" maxlength="120" required>
 
 
             <label>
@@ -746,7 +746,9 @@
                 <label>
                     <input
                         type="radio"
-                        name="moradia">
+                        name="tipo_moradia"
+                        value="casa"
+                        required>
 
                     Casa
                 </label>
@@ -754,7 +756,9 @@
                 <label>
                     <input
                         type="radio"
-                        name="moradia">
+                        name="tipo_moradia"
+                        value="apartamento"
+                        required>
 
                     Apartamento
                 </label>
@@ -771,7 +775,9 @@
                 <label>
                     <input
                         type="radio"
-                        name="tela">
+                        name="tela_protecao"
+                        value="true"
+                        required>
 
                     Sim
                 </label>
@@ -779,7 +785,9 @@
                 <label>
                     <input
                         type="radio"
-                        name="tela">
+                        name="tela_protecao"
+                        value="false"
+                        required>
 
                     Não
                 </label>
@@ -796,7 +804,9 @@
                 <label>
                     <input
                         type="radio"
-                        name="outros">
+                        name="outros_animais"
+                        value="true"
+                        required>
 
                     Sim
                 </label>
@@ -804,7 +814,9 @@
                 <label>
                     <input
                         type="radio"
-                        name="outros">
+                        name="outros_animais"
+                        value="false"
+                        required>
 
                     Não
                 </label>
@@ -813,7 +825,10 @@
 
 
             <textarea
+                name="justificativa"
                 placeholder="Por que deseja adotar?"
+                minlength="20"
+                maxlength="1000"
                 required>
 
             </textarea>
@@ -823,6 +838,7 @@
 
                 <input
                     type="checkbox"
+                    name="termo_aceito"
                     required>
 
                 Concordo com o Termo de Adoção

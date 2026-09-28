@@ -56,6 +56,13 @@ model SolicitacaoDeAdocao {
   id_solicitacao     Int      @id @default(autoincrement())
   status             String
   data_solicitacao   DateTime
+  telefone           String   @default("")
+  cidade             String   @default("")
+  tipo_moradia       String   @default("")
+  tela_protecao      Boolean  @default(false)
+  outros_animais    Boolean  @default(false)
+  justificativa      String   @default("")
+  termo_aceito       Boolean  @default(false)
 
   id_user Int
   usuario Usuario @relation(fields: [id_user], references: [id_usuario])

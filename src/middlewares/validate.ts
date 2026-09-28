@@ -17,7 +17,14 @@ export function validate(schema: z.ZodType) {
     const dados = resultado.data as { body?: unknown; params?: unknown; query?: unknown; headers?: unknown };
     if (dados.body !== undefined) req.body = dados.body;
     if (dados.params !== undefined) req.params = dados.params as Request["params"];
-    if (dados.query !== undefined) req.query = dados.query as Request["query"];
+    if (dados.query !== undefined) {
+      Object.defineProperty(req, "query", {
+        configurable: true,
+        enumerable: true,
+        writable: true,
+        value: dados.query
+      });
+    }
     if (dados.headers !== undefined) req.headers = dados.headers as Request["headers"];
     return next();
   };

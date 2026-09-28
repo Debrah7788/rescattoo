@@ -14,8 +14,14 @@ export function validate(schema) {
             req.body = dados.body;
         if (dados.params !== undefined)
             req.params = dados.params;
-        if (dados.query !== undefined)
-            req.query = dados.query;
+        if (dados.query !== undefined) {
+            Object.defineProperty(req, "query", {
+                configurable: true,
+                enumerable: true,
+                writable: true,
+                value: dados.query
+            });
+        }
         if (dados.headers !== undefined)
             req.headers = dados.headers;
         return next();

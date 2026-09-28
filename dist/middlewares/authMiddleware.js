@@ -1,39 +1,26 @@
 import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "../config.js";
-if (!JWT_SECRET) {
-    throw new Error("JWT_SECRET não configurado no ambiente.");
-}
-export function autenticar(req, res, next) {
-    try {
-        const authorization = req.headers.authorization;
-        if (!authorization) {
-            return res.status(401).json({
-                erro: "Token de autenticação não informado."
-            });
-        }
-        const partes = authorization.split(" ");
-        if (partes.length !== 2 ||
-            partes[0] !== "Bearer") {
-            return res.status(401).json({
-                erro: "Formato do token inválido."
-            });
-        }
-        const token = partes[1];
-        const usuario = jwt.verify(token, JWT_SECRET);
-        req.usuario = usuario;
-        next();
+import { AppError } from "./errorHandler.js";
+export function autenticar(req, _res, next) {
+    const authorization = req.headers.authorization;
+    if (!authorization) {
+        return next(new AppError(401, "Token de autenticação não informado."));
     }
-    catch (erro) {
-        return res.status(401).json({
-            erro: "Token inválido ou expirado."
-        });
+    const partes = authorization.split(" ");
+    if (partes.length !== 2 || partes[0] !== "Bearer") {
+        return next(new AppError(401, "Formato do token inválido."));
+    }
+    try {
+        req.usuario = jwt.verify(partes[1], JWT_SECRET);
+        return next();
+    }
+    catch {
+        return next(new AppError(401, "Token inválido ou expirado."));
     }
 }
 export function exigirAdministrador(req, res, next) {
     if (req.usuario?.perfil !== "admin") {
-        return res.status(403).json({
-            erro: "Acesso permitido apenas para administradores."
-        });
+        return next(new AppError(403, "Acesso permitido apenas para administradores."));
     }
-    next();
+    return next();
 }

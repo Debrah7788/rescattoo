@@ -1,10 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "../config.js";
-
-if (!JWT_SECRET) {
-  throw new Error("JWT_SECRET não configurado no ambiente.");
-}
+import { AppError } from "./errorHandler.js";
 
 export interface AuthRequest extends Request {
   usuario?: {
@@ -17,46 +14,24 @@ export interface AuthRequest extends Request {
 
 export function autenticar(
   req: AuthRequest,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ) {
+  const authorization = req.headers.authorization;
+  if (!authorization) {
+    return next(new AppError(401, "Token de autenticação não informado."));
+  }
+
+  const partes = authorization.split(" ");
+  if (partes.length !== 2 || partes[0] !== "Bearer") {
+    return next(new AppError(401, "Formato do token inválido."));
+  }
+
   try {
-    const authorization = req.headers.authorization;
-
-    if (!authorization) {
-      return res.status(401).json({
-        erro: "Token de autenticação não informado."
-      });
-    }
-
-    const partes = authorization.split(" ");
-
-    if (
-      partes.length !== 2 ||
-      partes[0] !== "Bearer"
-    ) {
-      return res.status(401).json({
-        erro: "Formato do token inválido."
-      });
-    }
-
-    const token = partes[1];
-
-    const usuario = jwt.verify(
-      token,
-      JWT_SECRET
-    ) as AuthRequest["usuario"];
-
-    req.usuario = usuario;
-
-    next();
-
-  } catch (erro) {
-
-    return res.status(401).json({
-      erro: "Token inválido ou expirado."
-    });
-
+    req.usuario = jwt.verify(partes[1], JWT_SECRET) as AuthRequest["usuario"];
+    return next();
+  } catch {
+    return next(new AppError(401, "Token inválido ou expirado."));
   }
 }
 
@@ -66,10 +41,8 @@ export function exigirAdministrador(
   next: NextFunction
 ) {
   if (req.usuario?.perfil !== "admin") {
-    return res.status(403).json({
-      erro: "Acesso permitido apenas para administradores."
-    });
+    return next(new AppError(403, "Acesso permitido apenas para administradores."));
   }
 
-  next();
+  return next();
 }

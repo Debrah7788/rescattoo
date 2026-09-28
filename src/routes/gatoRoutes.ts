@@ -7,6 +7,7 @@ import {
   putGato,
   deleteGato
 } from "../controllers/gatoController.js";
+import { criarSolicitacaoAdocao } from "../controllers/adocaoController.js";
 
 import {
   autenticar,
@@ -15,11 +16,12 @@ import {
 import { validate } from "../middlewares/validate.js";
 import { gatoBodySchema, gatoParamsAndBodySchema, gatoParamsSchema, gatoQuerySchema } from "../schemas/gatoSchemas.js";
 import { authHeadersSchema } from "../schemas/authSchemas.js";
+import { solicitacaoAdocaoSchema } from "../schemas/adocaoSchemas.js";
 
 const router = express.Router();
 
 // ======================================
-// ROTAS PÚBLICAS
+// ROTAS AUTENTICADAS
 // ======================================
 
 router.get("/gatos", validate(authHeadersSchema), autenticar, validate(gatoQuerySchema), getGatos);
@@ -55,6 +57,14 @@ router.delete(
   exigirAdministrador,
   validate(gatoParamsSchema),
   deleteGato
+);
+
+router.post(
+  "/gatos/:id/solicitacoes-adocao",
+  validate(authHeadersSchema),
+  autenticar,
+  validate(solicitacaoAdocaoSchema),
+  criarSolicitacaoAdocao
 );
 
 export default router;
