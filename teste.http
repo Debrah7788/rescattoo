@@ -1,362 +1,229 @@
-### ===================================
+@baseUrl = http://localhost:3000
+@usuarioContato = fixuser2026@gmail.com
+@usuarioSenha = Senha456
+@adminContato = fixadmin2026@gmail.com
+@adminSenha = Senha789
 
-### LISTAR TODOS OS GATOS
-
-### ===================================
-
-GET http://localhost:3000/gatos
-
-###
-
-### ===================================
-
-### BUSCAR GATO POR ID
-
-### ===================================
-
-GET http://localhost:3000/gatos/1
-
-###
-
-### ===================================
-
-### CRIAR GATO
-
-### ===================================
-
-POST http://localhost:3000/gatos
-Authorization: Bearer COLAR_TOKEN
+### Login do usuário para obter token atualizado
+# @name loginUsuario
+POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-"nome_gato": "Nina",
-"idade": "2 meses",
-"sexo": "F",
-"cor": "Cinza",
-"porte": "Pequeno",
-"temperamento": "Carinhosa",
-"status": "Disponivel",
-"historico_tratamento": "Vacinada"
+  "contato": "{{usuarioContato}}",
+  "senha": "{{usuarioSenha}}",
+  "perfil": "usuario"
+}
+
+###
+@token = {{loginUsuario.response.body.$.token}}
+
+### Login do admin para obter token atualizado
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "contato": "{{adminContato}}",
+  "senha": "{{adminSenha}}",
+  "perfil": "admin"
+}
+
+###
+@adminToken = {{loginAdmin.response.body.$.token}}
+
+### ===================================
+### GATOS - CRIAR VÁLIDO
+### ===================================
+# Execute a requisição loginAdmin antes desta requisição.
+# @name criarGato
+POST {{baseUrl}}/gatos
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "nome_gato": "Nina",
+  "idade": "2 meses",
+  "sexo": "F",
+  "cor": "Cinza",
+  "porte": "Pequeno",
+  "temperamento": "Carinhosa",
+  "status": "Disponivel",
+  "historico_tratamento": "Vacinada"
+}
+
+###
+@gatoCriadoId = {{criarGato.response.body.$.id_gato}}
+
+### ===================================
+### GATOS - LISTAR TODOS
+### ===================================
+GET {{baseUrl}}/gatos
+Authorization: Bearer {{token}}
+
+###
+
+### ===================================
+### GATOS - BUSCAR POR ID
+### ===================================
+GET {{baseUrl}}/gatos/{{gatoCriadoId}}
+Authorization: Bearer {{token}}
+
+###
+
+### ===================================
+### GATOS - ATUALIZAR VÁLIDO
+### ===================================
+PUT {{baseUrl}}/gatos/{{gatoCriadoId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "nome_gato": "Luna Atualizada",
+  "idade": "4 meses",
+  "sexo": "F",
+  "cor": "Branco",
+  "porte": "Pequeno",
+  "temperamento": "Calma",
+  "status": "Disponivel",
+  "historico_tratamento": "Vacinada e vermifugada"
+}
+
+###
+### GATOS - CONFIRMAR ATUALIZAÇÃO
+GET {{baseUrl}}/gatos/{{gatoCriadoId}}
+Authorization: Bearer {{token}}
+
+###
+
+### ===================================
+### GATOS - DELETAR VÁLIDO
+### ===================================
+DELETE {{baseUrl}}/gatos/{{gatoCriadoId}}
+Authorization: Bearer {{adminToken}}
+
+###
+
+### ===================================
+### GATOS - CONFIRMAR EXCLUSÃO (404)
+### ===================================
+GET {{baseUrl}}/gatos/{{gatoCriadoId}}
+Authorization: Bearer {{token}}
+
+###
+
+### ===================================
+### GATOS - BUSCAR INEXISTENTE (404)
+### ===================================
+GET {{baseUrl}}/gatos/999999
+Authorization: Bearer {{token}}
+
+###
+
+### ===================================
+### GATOS - CRIAR INVÁLIDO (body vazio)
+### ===================================
+POST {{baseUrl}}/gatos
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "nome_gato": "",
+  "idade": "",
+  "sexo": ""
 }
 
 ###
 
 ### ===================================
-
-### ATUALIZAR GATO
-
+### GATOS - ATUALIZAR INEXISTENTE (404)
 ### ===================================
-
-PUT http://localhost:3000/gatos/1
-Authorization: Bearer COLAR_TOKEN
+PUT {{baseUrl}}/gatos/999
+Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
-"nome_gato": "Luna Atualizada",
-"idade": "4 meses",
-"sexo": "F",
-"cor": "Branco",
-"porte": "Pequeno",
-"temperamento": "Calma",
-"status": "Disponivel",
-"historico_tratamento": "Vacinada e Vermifugada"
+  "nome_gato": "Teste",
+  "idade": "1 ano",
+  "sexo": "M",
+  "cor": "Preto",
+  "porte": "Médio",
+  "temperamento": "Calmo",
+  "status": "Disponivel",
+  "historico_tratamento": "Nenhum"
 }
 
 ###
 
 ### ===================================
-
-### DELETAR GATO
-
+### GATOS - DELETAR INEXISTENTE (404)
 ### ===================================
-
-DELETE http://localhost:3000/gatos/3
-Authorization: Bearer COLAR_TOKEN
+DELETE {{baseUrl}}/gatos/999
+Authorization: Bearer {{adminToken}}
 
 ###
 
 ### ===================================
-
-### CASO INVÁLIDO - BUSCAR GATO QUE NÃO EXISTE
-
+### GATOS - PARAMETRO INVÁLIDO (400)
 ### ===================================
-
-GET http://localhost:3000/gatos/999
-Authorization: Bearer COLAR_TOKEN
+GET {{baseUrl}}/gatos/abc
+Authorization: Bearer {{token}}
 
 ###
 
 ### ===================================
+### GATOS - QUERY INVÁLIDA (400)
+### ===================================
+GET {{baseUrl}}/gatos?pagina=0&limite=101
+Authorization: Bearer {{token}}
 
-### CASO INVÁLIDO - CRIAR GATO SEM DADOS
+###
 
 ### ===================================
+### GATOS - QUERY VÁLIDA
+### ===================================
+GET {{baseUrl}}/gatos?pagina=1&limite=10
+Authorization: Bearer {{token}}
 
-POST http://localhost:3000/gatos
-Authorization: Bearer COLAR_TOKEN
+###
+
+### ===================================
+### GATOS - SEM AUTORIZAÇÃO (401)
+### ===================================
+GET {{baseUrl}}/gatos
+
+###
+
+### ===================================
+### GATOS - SEM PERMISSAO DE ADMIN (403)
+### ===================================
+POST {{baseUrl}}/gatos
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-"nome_gato": "",
-"idade": "",
-"sexo": ""
+  "nome_gato": "Gato sem permissão",
+  "idade": "1 ano",
+  "sexo": "M",
+  "cor": "Laranja",
+  "porte": "Médio",
+  "temperamento": "Brincalhão",
+  "status": "Disponivel",
+  "historico_tratamento": "Sem histórico"
 }
 
 ###
 
 ### ===================================
-
-### CASO INVÁLIDO - ATUALIZAR GATO INEXISTENTE
-
+### GATOS - BODY INCOMPLETO (400)
 ### ===================================
-
-PUT http://localhost:3000/gatos/999
-Authorization: Bearer COLAR_TOKEN
+POST {{baseUrl}}/gatos
+Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
-"nome_gato": "Teste",
-"idade": "1 ano",
-"sexo": "M",
-"cor": "Preto",
-"porte": "Médio",
-"temperamento": "Calmo",
-"status": "Disponivel",
-"historico_tratamento": "Nenhum"
+  "nome_gato": "Nina",
+  "idade": "2 meses",
+  "sexo": "F"
 }
-
 ###
-
-### ===================================
-
-### CASO INVÁLIDO - DELETAR GATO INEXISTENTE
-
-### ===================================
-
-DELETE http://localhost:3000/gatos/999
-Authorization: Bearer COLAR_TOKEN
-
-###
-
-### ===================================
-
-### AUTENTICAÇÃO - CADASTRAR USUÁRIO
-
-### ===================================
-
-POST http://localhost:3000/auth/register
-Content-Type: application/json
-
-{
-"nome": "Gisely",
-"endereco": "João Pessoa",
-"contato": "[gisely999@gmail.com](mailto:gisely999@gmail.com)",
-"senha": "Senha456",
-"perfil": "usuario"
-}
-
-###
-
-### ===================================
-
-### VALIDAÇÃO - BODY INVÁLIDO (400 + issues)
-
-### ===================================
-
-POST http://localhost:3000/auth/register
-Content-Type: application/json
-
-{
-"nome": "A",
-"contato": "email-invalido",
-"senha": "123"
-}
-
-###
-
-### ===================================
-
-### VALIDAÇÃO - PARÂMETRO INVÁLIDO (400)
-
-### ===================================
-
-GET http://localhost:3000/gatos/abc
-Authorization: Bearer COLAR_TOKEN
-
-###
-
-### ===================================
-
-### VALIDAÇÃO - QUERY INVÁLIDA (400)
-
-### ===================================
-
-GET http://localhost:3000/gatos?pagina=0&limite=101
-Authorization: Bearer COLAR_TOKEN
-
-###
-
-### ===================================
-
-### VALIDAÇÃO - QUERY VÁLIDA
-
-### ===================================
-
-GET http://localhost:3000/gatos?pagina=1&limite=10
-Authorization: Bearer COLAR_TOKEN
-
-###
-
-### ===================================
-
-### VALIDAÇÃO - JSON MALFORMADO (400)
-
-### ===================================
-
-POST http://localhost:3000/gatos
-Authorization: Bearer COLAR_TOKEN
-Content-Type: application/json
-
-{
-"nome_gato": "Nina",
-"idade": "2 meses",
-"sexo": "F",
-
-###
-
-### ===================================
-
-### AUTENTICAÇÃO - CADASTRAR ADMINISTRADOR
-
-### ===================================
-
-POST http://localhost:3000/auth/register
-Content-Type: application/json
-
-{
-"nome": "Administrador",
-"endereco": "João Pessoa",
-"contato": "[admin@rescatto.com](mailto:admin@rescatto.com)",
-"senha": "Senha789",
-"perfil": "admin"
-}
-
-###
-
-### ===================================
-
-### AUTENTICAÇÃO - CADASTRO COM EMAIL EXISTENTE
-
-### ===================================
-
-POST http://localhost:3000/auth/register
-Content-Type: application/json
-
-{
-"nome": "Gisely 2",
-"endereco": "João Pessoa",
-"contato": "[gisely999@gmail.com](mailto:gisely999@gmail.com)",
-"senha": "Senha456",
-"perfil": "usuario"
-}
-
-###
-
-### ===================================
-
-### AUTENTICAÇÃO - LOGIN CORRETO
-
-### ===================================
-
-POST http://localhost:3000/auth/login
-Content-Type: application/json
-
-{
-"contato": "[gisely999@gmail.com](mailto:gisely999@gmail.com)",
-"senha": "Senha456"
-}
-
-###
-
-### ===================================
-
-### AUTENTICAÇÃO - LOGIN COM SENHA ERRADA
-
-### ===================================
-
-POST http://localhost:3000/auth/login
-Content-Type: application/json
-
-{
-"contato": "[gisely999@gmail.com](mailto:gisely999@gmail.com)",
-"senha": "senhaerrada"
-}
-
-###
-
-### ===================================
-
-### AUTENTICAÇÃO - LOGIN COM USUÁRIO INEXISTENTE
-
-### ===================================
-
-POST http://localhost:3000/auth/login
-Content-Type: application/json
-
-{
-"contato": "[naoexiste@gmail.com](mailto:naoexiste@gmail.com)",
-"senha": "Senha123"
-}
-
-###
-
-### ===================================
-
-### ROTA PROTEGIDA - SEM TOKEN
-
-### ===================================
-
-GET http://localhost:3000/auth/perfil
-
-###
-
-### ===================================
-
-### ROTA PROTEGIDA - TOKEN INVÁLIDO
-
-### ===================================
-
-GET http://localhost:3000/auth/perfil
-Authorization: Bearer token_invalido
-
-###
-
-### ===================================
-
-### ROTA PROTEGIDA - COM TOKEN
-
-### ===================================
-
-GET http://localhost:3000/auth/perfil
-Authorization: Bearer COLAR_TOKEN
-
-###
-
-### ===================================
-
-### ROTA PROTEGIDA - CRIAR GATO COM TOKEN
-
-### ===================================
-
-POST http://localhost:3000/gatos
-Authorization: Bearer COLAR_TOKEN
-Content-Type: application/json
-
-{
-"nome_gato": "Nina protegida",
-"idade": "2 meses",
-"sexo": "F",
-"cor": "Cinza",
-"porte": "Pequeno",
-"status": "Disponivel"
-}

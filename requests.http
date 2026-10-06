@@ -1,7 +1,65 @@
 @baseUrl = http://localhost:3000
-@token = COLAR_TOKEN_APOS_LOGIN
-@adminKey = CONFIGURAR_NO_ENV
-@gatoId = INFORMAR_ID_DE_GATO_EXISTENTE
+@adminKey = a4e1d660373bd5396bcd4bbe6cfa54ffd61dcf51f64f37c314bb691d7527f6c9
+@gatoId = 1
+@usuarioContato = fixuser2026@gmail.com
+@usuarioSenha = Senha456
+@adminContato = fixadmin2026@gmail.com
+@adminSenha = Senha789
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZF91c3VhcmlvIjo0MCwibm9tZSI6IlRlc3RlIEZpeCIsImNvbnRhdG8iOiJmaXh1c2VyMjAyNkBnbWFpbC5jb20iLCJwZXJmaWwiOiJ1c3VhcmlvIiwiaWF0IjoxNzkxMzA3NDE0LCJleHAiOjE3OTE5MTIyMTR9.kU_e61CYVnD8Lwq5qumEKinUrKPs_MEpnykMbmoQ0Hs
+@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZF91c3VhcmlvIjo0MSwibm9tZSI6IkFkbWluIEZpeCIsImNvbnRhdG8iOiJmaXhhZG1pbjIwMjZAZ21haWwuY29tIiwicGVyZmlsIjoiYWRtaW4iLCJpYXQiOjE3OTEzMDc0MTQsImV4cCI6MTc5MTkxMjIxNH0.LxtBLrwzqSOAko5zB9so8ck7cxL9IrAdWbyJixEsWH4
+
+### Cadastro válido do usuário para permitir login da suíte protegida
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "nome": "Pessoa REST Client",
+  "endereco": "Joao Pessoa",
+  "contato": "{{usuarioContato}}",
+  "senha": "{{usuarioSenha}}",
+  "perfil": "usuario"
+}
+
+### Cadastro válido do admin para permitir login da suíte protegida
+POST {{baseUrl}}/auth/register
+X-Admin-Key: {{adminKey}}
+Content-Type: application/json
+
+{
+  "nome": "Administrador REST",
+  "endereco": "Joao Pessoa",
+  "contato": "{{adminContato}}",
+  "senha": "{{adminSenha}}",
+  "perfil": "admin"
+}
+
+### Login do usuário para obter token
+# @name loginUsuario
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "contato": "{{usuarioContato}}",
+  "senha": "{{usuarioSenha}}",
+  "perfil": "usuario"
+}
+
+###
+@token = {{loginUsuario.response.body.$.token}}
+
+### Login do administrador para obter token
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "contato": "{{adminContato}}",
+  "senha": "{{adminSenha}}",
+  "perfil": "admin"
+}
+
+###
+@adminToken = {{loginAdmin.response.body.$.token}}
 
 ### Cadastro válido: dispara e-mail de boas-vindas
 POST {{baseUrl}}/auth/register
@@ -10,8 +68,8 @@ Content-Type: application/json
 {
   "nome": "Pessoa REST Client",
   "endereco": "Joao Pessoa",
-  "contato": "restclient2026@gmail.com",
-  "senha": "Senha456",
+  "contato": "{{usuarioContato}}",
+  "senha": "{{usuarioSenha}}",
   "perfil": "usuario"
 }
 
@@ -32,8 +90,8 @@ Content-Type: application/json
 {
   "nome": "Pessoa Duplicada",
   "endereco": "Joao Pessoa",
-  "contato": "restclient2026@gmail.com",
-  "senha": "Senha456",
+  "contato": "{{usuarioContato}}",
+  "senha": "{{usuarioSenha}}",
   "perfil": "usuario"
 }
 
@@ -45,8 +103,28 @@ Content-Type: application/json
 {
   "nome": "Administrador REST",
   "endereco": "Joao Pessoa",
-  "contato": "admin-rest2026@gmail.com",
-  "senha": "Senha456",
+  "contato": "{{adminContato}}",
+  "senha": "{{adminSenha}}",
+  "perfil": "admin"
+}
+
+### Login válido para obter token de usuário
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "contato": "{{usuarioContato}}",
+  "senha": "{{usuarioSenha}}",
+  "perfil": "usuario"
+}
+
+### Login válido para obter token de admin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "contato": "{{adminContato}}",
+  "senha": "{{adminSenha}}",
   "perfil": "admin"
 }
 
@@ -60,7 +138,7 @@ Authorization: Bearer {{token}}
 
 ### Body de gato invalido: 400 com os campos e motivos
 POST {{baseUrl}}/gatos
-Authorization: Bearer {{token}}
+Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
@@ -71,16 +149,6 @@ Content-Type: application/json
 ### Recurso inexistente: 404
 GET {{baseUrl}}/gatos/999999
 Authorization: Bearer {{token}}
-
-### Login para obter um token e testar as rotas protegidas
-POST {{baseUrl}}/auth/login
-Content-Type: application/json
-
-{
-  "contato": "restclient2026@gmail.com",
-  "senha": "Senha456",
-  "perfil": "usuario"
-}
 
 ### Listagem válida com query padrão
 GET {{baseUrl}}/gatos

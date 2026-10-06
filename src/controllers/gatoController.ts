@@ -30,8 +30,8 @@ export async function postGato(
   req: Request,
   res: Response
 ) {
-  await model.criarGato(req.body);
-  res.status(201).json({ mensagem: "Gato criado" });
+  const gato = await model.criarGato(req.body);
+  res.status(201).json({ mensagem: "Gato criado", id_gato: gato.id_gato, gato });
 }
 
 // PUT

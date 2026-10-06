@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ADMIN_KEY } from "../config.js";
+import { ADMIN_KEY, validarChaveAdmin } from "../config.js";
 
 const emailSchema = z.string()
   .trim()
@@ -24,7 +24,7 @@ export const registerSchema = z.object({
     perfil: z.enum(["usuario", "admin"]).optional().default("usuario")
   }).strict()
 }).superRefine((dados, contexto) => {
-  if (dados.body.perfil === "admin" && (!ADMIN_KEY || dados.headers["x-admin-key"] !== ADMIN_KEY)) {
+  if (dados.body.perfil === "admin" && (!ADMIN_KEY || !validarChaveAdmin(dados.headers["x-admin-key"]))) {
     contexto.addIssue({
       code: "custom",
       path: ["headers", "x-admin-key"],
