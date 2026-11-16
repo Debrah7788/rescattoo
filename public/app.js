@@ -5,6 +5,7 @@
 let idEditando = null;
 let idGatoAdocao = null;
 let secaoAtual = "inicio";
+let usuarioAutenticado = null;
 const historicoNavegacao = [];
 let toastTimeout;
 
@@ -34,7 +35,10 @@ async function validarSessao() {
 }
 
 function atualizarEstadoAutenticacao(usuario) {
-    document.getElementById("usuarioLogado").textContent = usuario ? `Olá, ${usuario.nome}` : "";
+    usuarioAutenticado = usuario;
+    document.getElementById("usuarioLogado").textContent = usuario
+        ? `Olá, ${usuario.nome} (${usuario.perfil === "admin" ? "administrador" : "usuário"})`
+        : "";
     document.getElementById("usuarioLogado").style.display = usuario ? "block" : "none";
     document.getElementById("linkLogin").style.display = usuario ? "none" : "block";
     document.getElementById("linkLogout").style.display = usuario ? "block" : "none";
@@ -97,9 +101,15 @@ window.logout = function () {
 
 window.mostrar = function (id, registrarHistorico = true) {
     const areasProtegidas = ["gatos", "adocao", "painelAdmin", "cadastroGato", "editarGato"];
-    if (areasProtegidas.includes(id) && !token()) {
+    if (areasProtegidas.includes(id) && !usuarioAutenticado) {
         mostrarMensagem("erroLogin", "Cadastre-se e faça login para acessar os gatos e os processos de adoção.");
         id = "login";
+    }
+
+    const areasAdmin = ["painelAdmin", "cadastroGato", "editarGato"];
+    if (areasAdmin.includes(id) && usuarioAutenticado && usuarioAutenticado.perfil !== "admin") {
+        mostrarToast("Esta área é exclusiva para administradores.", "erro");
+        id = "gatos";
     }
 
     if (id === secaoAtual) return;
@@ -283,14 +293,14 @@ document
 
         const dados = await resposta.json();
         localStorage.setItem("rescatto_token", dados.token);
-        localStorage.setItem("rescatto_usuario", JSON.stringify(dados.usuario));
-        atualizarEstadoAutenticacao(dados.usuario);
         this.reset();
         try {
-            await validarSessao();
-            const secaoInicial = dados.usuario.perfil === "admin" ? "painelAdmin" : "gatos";
+            const sessao = await validarSessao();
+            const usuario = sessao.usuario;
+            atualizarEstadoAutenticacao(usuario);
+            const secaoInicial = usuario.perfil === "admin" ? "painelAdmin" : "gatos";
             mostrar(secaoInicial);
-            if (dados.usuario.perfil === "admin") {
+            if (usuario.perfil === "admin") {
                 await carregarGatosAdmin();
             } else {
                 await carregarGatos();
@@ -704,9 +714,8 @@ window.escolherGato = async function (id, imagem) {
             await resposta.json();
 
         idGatoAdocao = id;
-        const usuario = JSON.parse(localStorage.getItem("rescatto_usuario") || "null");
-        document.getElementById("adocaoSolicitanteNome").textContent = usuario?.nome || "";
-        document.getElementById("adocaoSolicitanteContato").textContent = usuario?.contato || "";
+        document.getElementById("adocaoSolicitanteNome").textContent = usuarioAutenticado?.nome || "";
+        document.getElementById("adocaoSolicitanteContato").textContent = usuarioAutenticado?.contato || "";
 
         document
             .getElementById("imgGato")
@@ -790,18 +799,12 @@ document
 
 window.onload = function () {
 
-    const usuario = localStorage.getItem("rescatto_usuario");
-    atualizarEstadoAutenticacao(usuario ? JSON.parse(usuario) : null);
+    atualizarEstadoAutenticacao(null);
     const tokenAtual = token();
     if (!tokenAtual) return;
 
-    fetch("/auth/perfil", { headers: cabecalhoAutenticado() })
-        .then(resposta => {
-            if (!resposta.ok) throw new Error("Sessão inválida");
-            return resposta.json();
-        })
+    validarSessao()
         .then(dados => {
-            localStorage.setItem("rescatto_usuario", JSON.stringify(dados.usuario));
             atualizarEstadoAutenticacao(dados.usuario);
             const secaoInicial = dados.usuario.perfil === "admin" ? "painelAdmin" : "gatos";
             mostrar(secaoInicial, false);
@@ -809,6 +812,7 @@ window.onload = function () {
         })
         .catch(() => {
             limparSessao();
+            mostrarMensagem("erroLogin", "Sua sessão expirou. Faça login novamente para continuar.");
         });
 
 };

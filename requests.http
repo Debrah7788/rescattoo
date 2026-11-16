@@ -1,14 +1,12 @@
 @baseUrl = http://localhost:3000
-@adminKey = a4e1d660373bd5396bcd4bbe6cfa54ffd61dcf51f64f37c314bb691d7527f6c9
+@adminKey = SUBSTITUA_PELA_ADMIN_KEY_DO_SEU_ENV_LOCAL
 @gatoId = 1
-@usuarioContato = fixuser2026@gmail.com
+@usuarioContato = auth.teste2026@gmail.com
 @usuarioSenha = Senha456
-@adminContato = fixadmin2026@gmail.com
+@adminContato = auth.admin2026@gmail.com
 @adminSenha = Senha789
-@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZF91c3VhcmlvIjo0MCwibm9tZSI6IlRlc3RlIEZpeCIsImNvbnRhdG8iOiJmaXh1c2VyMjAyNkBnbWFpbC5jb20iLCJwZXJmaWwiOiJ1c3VhcmlvIiwiaWF0IjoxNzkxMzA3NDE0LCJleHAiOjE3OTE5MTIyMTR9.kU_e61CYVnD8Lwq5qumEKinUrKPs_MEpnykMbmoQ0Hs
-@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZF91c3VhcmlvIjo0MSwibm9tZSI6IkFkbWluIEZpeCIsImNvbnRhdG8iOiJmaXhhZG1pbjIwMjZAZ21haWwuY29tIiwicGVyZmlsIjoiYWRtaW4iLCJpYXQiOjE3OTEzMDc0MTQsImV4cCI6MTc5MTkxMjIxNH0.LxtBLrwzqSOAko5zB9so8ck7cxL9IrAdWbyJixEsWH4
 
-### Cadastro válido do usuário para permitir login da suíte protegida
+### Cadastro valido (201 e solicita e-mail de boas-vindas; use e-mail novo)
 POST {{baseUrl}}/auth/register
 Content-Type: application/json
 
@@ -20,20 +18,45 @@ Content-Type: application/json
   "perfil": "usuario"
 }
 
-### Cadastro válido do admin para permitir login da suíte protegida
+### Body invalido (400; nao cria usuario nem envia e-mail)
 POST {{baseUrl}}/auth/register
-X-Admin-Key: {{adminKey}}
 Content-Type: application/json
 
 {
-  "nome": "Administrador REST",
-  "endereco": "Joao Pessoa",
-  "contato": "{{adminContato}}",
-  "senha": "{{adminSenha}}",
-  "perfil": "admin"
+  "nome": "A",
+  "contato": "email-invalido",
+  "senha": "123"
 }
 
-### Login do usuário para obter token
+### E-mail duplicado (409; nao envia outro e-mail)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "nome": "Pessoa Duplicada",
+  "endereco": "Joao Pessoa",
+  "contato": "{{usuarioContato}}",
+  "senha": "{{usuarioSenha}}",
+  "perfil": "usuario"
+}
+
+### Login com senha incorreta (401)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "contato": "{{usuarioContato}}",
+  "senha": "SenhaErrada456",
+  "perfil": "usuario"
+}
+
+### Rota protegida sem token (401)
+GET {{baseUrl}}/gatos
+
+### Perfil sem token (401)
+GET {{baseUrl}}/auth/perfil
+
+### Login valido; execute antes das requisicoes protegidas abaixo
 # @name loginUsuario
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
@@ -46,6 +69,27 @@ Content-Type: application/json
 
 ###
 @token = {{loginUsuario.response.body.$.token}}
+
+### Acesso autenticado ao perfil (200)
+GET {{baseUrl}}/auth/perfil
+Authorization: Bearer {{token}}
+
+### Acesso autenticado a funcionalidade protegida (200)
+GET {{baseUrl}}/gatos
+Authorization: Bearer {{token}}
+
+### Cadastro administrativo: exige ADMIN_KEY configurada
+POST {{baseUrl}}/auth/register
+X-Admin-Key: {{adminKey}}
+Content-Type: application/json
+
+{
+  "nome": "Administrador REST",
+  "endereco": "Joao Pessoa",
+  "contato": "{{adminContato}}",
+  "senha": "{{adminSenha}}",
+  "perfil": "admin"
+}
 
 ### Login do administrador para obter token
 # @name loginAdmin
@@ -61,78 +105,11 @@ Content-Type: application/json
 ###
 @adminToken = {{loginAdmin.response.body.$.token}}
 
-### Cadastro válido: dispara e-mail de boas-vindas
-POST {{baseUrl}}/auth/register
-Content-Type: application/json
-
-{
-  "nome": "Pessoa REST Client",
-  "endereco": "Joao Pessoa",
-  "contato": "{{usuarioContato}}",
-  "senha": "{{usuarioSenha}}",
-  "perfil": "usuario"
-}
-
-### Body inválido: 400 com issues.path e issues.message
-POST {{baseUrl}}/auth/register
-Content-Type: application/json
-
-{
-  "nome": "A",
-  "contato": "email-invalido",
-  "senha": "123"
-}
-
-### E-mail duplicado: 409 com issue no campo contato
-POST {{baseUrl}}/auth/register
-Content-Type: application/json
-
-{
-  "nome": "Pessoa Duplicada",
-  "endereco": "Joao Pessoa",
-  "contato": "{{usuarioContato}}",
-  "senha": "{{usuarioSenha}}",
-  "perfil": "usuario"
-}
-
-### Cadastro administrativo: exige ADMIN_KEY configurada
-POST {{baseUrl}}/auth/register
-X-Admin-Key: {{adminKey}}
-Content-Type: application/json
-
-{
-  "nome": "Administrador REST",
-  "endereco": "Joao Pessoa",
-  "contato": "{{adminContato}}",
-  "senha": "{{adminSenha}}",
-  "perfil": "admin"
-}
-
-### Login válido para obter token de usuário
-POST {{baseUrl}}/auth/login
-Content-Type: application/json
-
-{
-  "contato": "{{usuarioContato}}",
-  "senha": "{{usuarioSenha}}",
-  "perfil": "usuario"
-}
-
-### Login válido para obter token de admin
-POST {{baseUrl}}/auth/login
-Content-Type: application/json
-
-{
-  "contato": "{{adminContato}}",
-  "senha": "{{adminSenha}}",
-  "perfil": "admin"
-}
-
-### Parametro de rota invalido: 400
+### Parametro de rota invalido (400; params.id deve ser inteiro positivo)
 GET {{baseUrl}}/gatos/abc
 Authorization: Bearer {{token}}
 
-### Query invalida: 400
+### Query invalida (400; pagina/limite devem ser positivos e limite <= 100)
 GET {{baseUrl}}/gatos?pagina=0&limite=101
 Authorization: Bearer {{token}}
 
@@ -191,5 +168,7 @@ Content-Type: application/json
 {"nome":"JSON quebrado"
 
 ### Teste de falha SMTP (execução manual)
-# Inicie com JWT_SECRET contendo ao menos 32 caracteres e SMTP_HOST=127.0.0.1 SMTP_PORT=1 SMTP_USER=teste SMTP_PASS=teste NODE_ENV=production.
-# O cadastro deve continuar respondendo 201 e o terminal deve registrar a falha.
+# Em um servidor separado, configure JWT_SECRET (32+ caracteres), ADMIN_KEY (16+),
+# SMTP_HOST=127.0.0.1, SMTP_PORT=1, SMTP_USER=teste, SMTP_PASS=teste e NODE_ENV=production.
+# Execute o cadastro valido acima com um e-mail novo: retorna 201 e registra a falha SMTP no terminal.
+# Body invalido e e-mail duplicado retornam 400/409 e nao disparam o envio.
