@@ -1,3 +1,5 @@
+import { api } from "./api-client.js";
+
 // ======================================
 // CONTROLE DE EDIÇÃO
 // ======================================
@@ -22,26 +24,23 @@ function cabecalhoAutenticado() {
 }
 
 async function validarSessao() {
-    const resposta = await fetch("/auth/perfil", {
+    return api.json("/auth/perfil", {
         headers: cabecalhoAutenticado(),
         cache: "no-store"
     });
-
-    if (!resposta.ok) {
-        throw new Error(await mensagemErro(resposta, "Sessão inválida."));
-    }
-
-    return resposta.json();
 }
 
 function atualizarEstadoAutenticacao(usuario) {
     usuarioAutenticado = usuario;
-    document.getElementById("usuarioLogado").textContent = usuario
+    document.getElementById("nomeUsuarioLogado").textContent = usuario
         ? `Olá, ${usuario.nome} (${usuario.perfil === "admin" ? "administrador" : "usuário"})`
         : "";
     document.getElementById("usuarioLogado").style.display = usuario ? "block" : "none";
+    document.getElementById("linkPerfil").style.display = usuario ? "block" : "none";
     document.getElementById("linkLogin").style.display = usuario ? "none" : "block";
     document.getElementById("linkLogout").style.display = usuario ? "block" : "none";
+    document.getElementById("avatarCabecalho").src = usuario?.imagem || "placeholder.jpg";
+    document.getElementById("avatarPerfil").src = usuario?.imagem || "placeholder.jpg";
 }
 
 function mostrarMensagem(id, mensagem) {
@@ -100,7 +99,7 @@ window.logout = function () {
 };
 
 window.mostrar = function (id, registrarHistorico = true) {
-    const areasProtegidas = ["gatos", "adocao", "painelAdmin", "cadastroGato", "editarGato"];
+    const areasProtegidas = ["gatos", "adocao", "perfil", "painelAdmin", "cadastroGato", "editarGato"];
     if (areasProtegidas.includes(id) && !usuarioAutenticado) {
         mostrarMensagem("erroLogin", "Cadastre-se e faça login para acessar os gatos e os processos de adoção.");
         id = "login";
@@ -198,7 +197,7 @@ document
 
         let resposta;
         try {
-            resposta = await fetch("/auth/register", {
+            resposta = await api.request("/auth/register", {
                 method: "POST",
                 headers,
                 body: JSON.stringify({
@@ -272,7 +271,7 @@ document
 
         let resposta;
         try {
-            resposta = await fetch("/auth/login", {
+            resposta = await api.request("/auth/login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ contato, senha, perfil })
@@ -312,6 +311,72 @@ document
             mostrarToast(mensagem, "erro");
         }
     });
+
+let urlPreviaImagem = null;
+const entradaImagem = document.getElementById("arquivoImagem");
+
+entradaImagem.addEventListener("change", function () {
+    const erro = document.getElementById("erroImagem");
+    const arquivo = this.files?.[0];
+    erro.textContent = "";
+    erro.hidden = true;
+
+    if (urlPreviaImagem) URL.revokeObjectURL(urlPreviaImagem);
+    urlPreviaImagem = null;
+    if (!arquivo) {
+        document.getElementById("avatarPerfil").src = usuarioAutenticado?.imagem || "placeholder.jpg";
+        return;
+    }
+
+    if (arquivo.size > 2 * 1024 * 1024) {
+        erro.textContent = "A imagem deve ter no máximo 2 MB.";
+        erro.hidden = false;
+        this.value = "";
+        document.getElementById("avatarPerfil").src = usuarioAutenticado?.imagem || "placeholder.jpg";
+        return;
+    }
+    if (!["image/jpeg", "image/png", "image/gif"].includes(arquivo.type)) {
+        erro.textContent = "Tipo não permitido. Escolha uma imagem JPEG, PNG ou GIF.";
+        erro.hidden = false;
+        this.value = "";
+        document.getElementById("avatarPerfil").src = usuarioAutenticado?.imagem || "placeholder.jpg";
+        return;
+    }
+
+    urlPreviaImagem = URL.createObjectURL(arquivo);
+    document.getElementById("avatarPerfil").src = urlPreviaImagem;
+});
+
+document.getElementById("formImagem").addEventListener("submit", async function (evento) {
+    evento.preventDefault();
+    const erro = document.getElementById("erroImagem");
+    erro.textContent = "";
+    erro.hidden = true;
+
+    try {
+        const resposta = await api.request("/api/users/image", {
+            method: usuarioAutenticado?.imagem ? "PUT" : "POST",
+            headers: cabecalhoAutenticado(),
+            body: new FormData(this)
+        });
+        if (!resposta.ok) {
+            throw new Error(await mensagemErro(resposta, "Não foi possível enviar a imagem.", this));
+        }
+
+        const dados = await resposta.json();
+        usuarioAutenticado = { ...usuarioAutenticado, imagem: dados.imagem.caminho };
+        atualizarEstadoAutenticacao(usuarioAutenticado);
+        if (urlPreviaImagem) URL.revokeObjectURL(urlPreviaImagem);
+        urlPreviaImagem = null;
+        this.reset();
+        mostrarToast("Foto do perfil atualizada.");
+    } catch (falha) {
+        const mensagem = falha instanceof Error ? falha.message : "Não foi possível enviar a imagem.";
+        erro.textContent = mensagem;
+        erro.hidden = false;
+        mostrarToast(mensagem, "erro");
+    }
+});
 
 
 // ======================================
@@ -356,7 +421,7 @@ document
 
             if (idEditando == null) {
 
-                const resposta = await fetch("/gatos", {
+                const resposta = await api.request("/gatos", {
 
                     method: "POST",
 
@@ -375,7 +440,7 @@ document
 
             else {
 
-                const resposta = await fetch(`/gatos/${idEditando}`, {
+                const resposta = await api.request(`/gatos/${idEditando}`, {
 
                     method: "PUT",
 
@@ -421,7 +486,7 @@ async function carregarGatos() {
 
     try {
 
-        const resposta = await fetch("/gatos", {
+        const resposta = await api.request("/gatos", {
             headers: cabecalhoAutenticado(),
             cache: "no-store"
         });
@@ -500,7 +565,7 @@ async function carregarGatosAdmin() {
 
     try {
 
-        const resposta = await fetch("/gatos", {
+        const resposta = await api.request("/gatos", {
             headers: cabecalhoAutenticado(),
             cache: "no-store"
         });
@@ -595,7 +660,7 @@ window.editar = async function (id) {
     try {
 
         const resposta =
-            await fetch(`/gatos/${id}`, { headers: cabecalhoAutenticado() });
+            await api.request(`/gatos/${id}`, { headers: cabecalhoAutenticado() });
 
         if (!resposta.ok) {
             throw new Error(await mensagemErro(resposta, "Não foi possível buscar o gato."));
@@ -666,7 +731,7 @@ window.excluir = async function (id) {
 
     try {
 
-        const resposta = await fetch(`/gatos/${id}`, {
+        const resposta = await api.request(`/gatos/${id}`, {
 
             method: "DELETE",
             headers: cabecalhoAutenticado()
@@ -702,7 +767,7 @@ window.escolherGato = async function (id, imagem) {
     try {
 
         const resposta =
-            await fetch(`/gatos/${id}`, {
+            await api.request(`/gatos/${id}`, {
                 headers: cabecalhoAutenticado()
             });
 
@@ -769,7 +834,7 @@ document
         };
 
         try {
-            const resposta = await fetch(`/gatos/${idGatoAdocao}/solicitacoes-adocao`, {
+            const resposta = await api.request(`/gatos/${idGatoAdocao}/solicitacoes-adocao`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -857,7 +922,7 @@ document
         };
 
         try {
-            const resposta = await fetch(`/gatos/${idEditando}`, {
+            const resposta = await api.request(`/gatos/${idEditando}`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",

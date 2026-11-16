@@ -19,8 +19,19 @@ model Usuario {
   solicitacoes SolicitacaoDeAdocao[]
   adocoes      Adocao[]
   doacoes      Doacao[]
+  imagem       Imagem?
 
   @@map("Usuario")
+}
+
+model Imagem {
+  id_imagem   Int      @id @default(autoincrement())
+  caminho     String   @unique
+  data_upload DateTime @default(now())
+  id_user     Int      @unique
+  usuario     Usuario  @relation(fields: [id_user], references: [id_usuario], onDelete: Cascade)
+
+  @@map("Imagem")
 }
 
 model Gato {

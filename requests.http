@@ -70,6 +70,73 @@ Content-Type: application/json
 ###
 @token = {{loginUsuario.response.body.$.token}}
 
+### Upload de imagem sem autenticação: 401 antes de processar o arquivo
+POST {{baseUrl}}/api/users/image
+Content-Type: multipart/form-data; boundary=----RescattoBoundary
+
+------RescattoBoundary
+Content-Disposition: form-data; name="imagem"; filename="foto.jpg"
+Content-Type: image/jpeg
+
+< ./public/placeholder.jpg
+------RescattoBoundary--
+
+### Primeiro envio válido: 201 e caminho público
+# @name uploadImagem
+POST {{baseUrl}}/api/users/image
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----RescattoBoundary
+
+------RescattoBoundary
+Content-Disposition: form-data; name="imagem"; filename="foto.jpg"
+Content-Type: image/jpeg
+
+< ./public/placeholder.jpg
+------RescattoBoundary--
+
+###
+@caminhoImagem = {{uploadImagem.response.body.$.imagem.caminho}}
+
+### A imagem devolvida deve abrir diretamente no navegador
+GET {{baseUrl}}{{caminhoImagem}}
+
+### Atualização para o mesmo usuário: 201 e novo caminho, sem segundo registro
+# @name atualizarImagem
+PUT {{baseUrl}}/api/users/image
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----RescattoBoundary
+
+------RescattoBoundary
+Content-Disposition: form-data; name="imagem"; filename="nova-foto.jpg"
+Content-Type: image/jpeg
+
+< ./public/gato1.jpg
+------RescattoBoundary--
+
+### Imagem acima de 2 MB: 400 (crie o arquivo local conforme README)
+POST {{baseUrl}}/api/users/image
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----RescattoBoundary
+
+------RescattoBoundary
+Content-Disposition: form-data; name="imagem"; filename="maior-que-2mb.jpg"
+Content-Type: image/jpeg
+
+< ./tests/fixtures/maior-que-2mb.jpg
+------RescattoBoundary--
+
+### Tipo não permitido: 400, sem gravar o arquivo
+POST {{baseUrl}}/api/users/image
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----RescattoBoundary
+
+------RescattoBoundary
+Content-Disposition: form-data; name="imagem"; filename="documento.txt"
+Content-Type: text/plain
+
+< ./README.md
+------RescattoBoundary--
+
 ### Acesso autenticado ao perfil (200)
 GET {{baseUrl}}/auth/perfil
 Authorization: Bearer {{token}}

@@ -1,7 +1,7 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import prisma from "../prisma.js";
-import { JWT_EXPIRES_IN, JWT_SECRET } from "../config.js";
+import { JWT_EXPIRES_IN, JWT_SECRET, NODE_ENV } from "../config.js";
 import { sendWelcomeEmail } from "../services/sendMail.js";
 import { AppError } from "../middlewares/errorHandler.js";
 // ======================================
@@ -22,8 +22,10 @@ export async function cadastrarUsuario(req, res) {
             perfil: usuario.perfil
         }
     });
-    void sendWelcomeEmail(usuario.contato, usuario.nome)
-        .catch(erro => console.error("Falha ao enviar e-mail de boas-vindas:", erro));
+    if (NODE_ENV !== "test") {
+        void sendWelcomeEmail(usuario.contato, usuario.nome)
+            .catch(erro => console.error("Falha ao enviar e-mail de boas-vindas:", erro));
+    }
 }
 // ======================================
 // LOGIN
@@ -64,6 +66,15 @@ export async function loginUsuario(req, res) {
         }
     });
 }
-export function obterPerfil(req, res) {
-    return res.status(200).json({ usuario: req.usuario });
+export async function obterPerfil(req, res) {
+    const idUsuario = req.usuario?.id_usuario;
+    const imagem = idUsuario
+        ? await prisma.imagem.findUnique({
+            where: { id_user: idUsuario },
+            select: { caminho: true }
+        })
+        : null;
+    return res.status(200).json({
+        usuario: { ...req.usuario, imagem: imagem?.caminho ?? null }
+    });
 }

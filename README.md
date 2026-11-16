@@ -20,6 +20,36 @@ O middleware `autenticar` verifica assinatura e validade do JWT e popula `req.us
 
 Inicie o servidor e abra [`requests.http`](./requests.http) no VS Code com a extensão REST Client. Execute, em ordem, o cadastro, os cenários inválidos, as chamadas protegidas sem token e o login válido. O valor de `@token` é capturado da resposta do login e enviado como Bearer no perfil e na listagem de gatos. O arquivo também demonstra cadastro duplicado (409), senha incorreta (401), acesso protegido (401 sem token / 200 com token) e operações administrativas.
 
+## Upload de imagem do perfil
+
+`POST /api/users/image` envia a primeira imagem e `PUT /api/users/image` a substitui. Ambas exigem `Authorization: Bearer <token>` e executam `autenticar` antes do middleware Multer, portanto uma requisição sem token recebe `401` antes de iniciar o processamento multipart. O campo do formulário multipart chama-se `imagem`.
+
+O Multer grava em `uploads/`, aceita apenas `image/jpeg`, `image/png` e `image/gif`, limita cada arquivo a 2 MB e gera um nome UUID no servidor; o nome original enviado pelo cliente não é usado. A rejeição do tipo acontece no `fileFilter`, antes da escrita. O middleware de erros converte tipo, campo e tamanho inválidos em `400`. A resposta `201` contém `imagem.caminho`, por exemplo `/uploads/<uuid>.jpg`, servido publicamente pelo Express.
+
+O model Prisma `Imagem` tem `id_user @unique`, garantindo no banco um único registro por usuário. O envio usa `upsert`: a substituição atualiza `caminho` e remove o arquivo antigo depois que o novo caminho foi salvo. A migração correspondente é aplicada por `npm run dev` ou `npm start` (`prisma migrate deploy`). `uploads/.gitkeep` mantém o diretório no repositório, e os demais arquivos da pasta ficam excluídos pelo `.gitignore`.
+
+No site, entre e abra **Meu perfil** para escolher uma imagem. O navegador envia `FormData` sem definir manualmente `Content-Type` (o boundary multipart é gerado pelo navegador), inclui o Bearer token e mostra uma prévia, o avatar no cabeçalho e mensagens para tipo/tamanho inválidos. `GET /auth/perfil` retorna também o caminho da imagem.
+
+Os cenários de upload ficam no fim de [`requests.http`](./requests.http). Execute primeiro o login para definir `@token`; o campo `imagem` e o token Bearer aparecem nas requisições. Para testar o limite, crie o fixture local de 2 MB + 1 byte antes de executar a seção correspondente:
+
+```bash
+mkdir -p tests/fixtures
+node -e "require('fs').writeFileSync('tests/fixtures/maior-que-2mb.jpg', Buffer.alloc(2 * 1024 * 1024 + 1))"
+```
+
+O REST Client demonstra envio sem token (`401`), envio válido (`201`), acesso ao caminho público, atualização pelo mesmo usuário (caminho novo), arquivo grande (`400`) e tipo não permitido (`400`). A requisição sem autenticação é executada antes do Multer; tipos rejeitados não são gravados.
+
+## Testes
+
+- `npm run test:unit`: testes `node:test` de schemas e funções puras, sem servidor, banco ou rede (script portátil entre Windows/macOS/Linux).
+- `npm run front:test`: testes Vitest/JSDOM do cliente HTTP, com mocks para `fetch` e `localStorage`.
+- `npm run test:quick`: testes unitários e do front-end para o ciclo rápido.
+- `npm test` (ou `npm run test:api`): inclui rotas com Supertest sem abrir porta. O runner cria um SQLite descartável, aplica as migrations, usa dados únicos por execução e remove o banco temporário ao terminar. Com `NODE_ENV=test`, cadastro não envia e-mail.
+- `npm run e2e`: Playwright Chromium executa cadastro, login e solicitação de adoção na interface. O global setup recria `prisma/e2e-test.db` e semeia um gato de teste; o global teardown remove esse banco; o `webServer` sobe `src/index.ts` na porta 3100. Instale o navegador com `npx playwright install chromium` (em Linux, `npx playwright install-deps chromium`).
+- `npm run coverage`: executa cobertura do servidor e do cliente. O servidor usa c8 com pisos globais de 70% para linhas/declarações/funções e 60% para branches; o Vitest exige 90% de linhas, declarações e funções e 80% de branches no módulo HTTP.
+
+Os relatórios detalhados são gerados em `coverage/` (HTML ignorado pelo Git); a saída de texto informa, por arquivo, as linhas não cobertas. Na validação desta suíte: servidor **73,47% linhas**, **79,16% funções** e **66,66% branches**; cliente **100% linhas**, **100% funções** e **91,66% branches**. Os testes unitários/front-end rodam sem infraestrutura; API e principalmente E2E ficam para a validação de integração completa.
+
 Para testar o fluxo administrativo, configure um valor próprio em `ADMIN_KEY` no `.env` e substitua `@adminKey` em `requests.http` pelo valor local. Não compartilhe nem faça commit desse valor. Altere os e-mails de teste se já existirem no banco.
 
 ## Validação, erros e e-mail

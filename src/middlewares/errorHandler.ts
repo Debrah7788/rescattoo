@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
+import { MulterError } from "multer";
 
 export class AppError extends Error {
   constructor(public readonly statusCode: number, message: string) {
@@ -14,6 +15,19 @@ export function notFoundHandler(_req: Request, res: Response) {
 }
 
 export function errorHandler(error: unknown, _req: Request, res: Response, _next: NextFunction) {
+  if (error instanceof MulterError) {
+    if (error.code === "LIMIT_FILE_SIZE") {
+      return res.status(400).json({
+        erro: "O arquivo excede o limite de 2 MB.",
+        issues: [{ path: "file", message: "Selecione uma imagem de até 2 MB." }]
+      });
+    }
+    return res.status(400).json({
+      erro: "Não foi possível processar o arquivo enviado.",
+      issues: [{ path: "file", message: error.message }]
+    });
+  }
+
   if (error instanceof ZodError) {
     return res.status(400).json({
       erro: "Dados de entrada inválidos.",

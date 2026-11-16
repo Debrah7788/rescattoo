@@ -98,6 +98,33 @@
             transform: scale(1.08);
         }
 
+        .usuario-logado {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .avatar-cabecalho {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid white;
+        }
+
+        .avatar-perfil {
+            width: 128px;
+            height: 128px;
+            margin: 0 auto 10px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid #dce8ed;
+        }
+
+        #erroImagem {
+            color: #a83232;
+        }
+
         .hero {
 
             height: 300px;
@@ -437,7 +464,14 @@
 
            <ul class="nav-links">
 
-    <li id="usuarioLogado" style="display:none"></li>
+    <li id="usuarioLogado" class="usuario-logado" style="display:none">
+        <img id="avatarCabecalho" class="avatar-cabecalho" src="placeholder.jpg" alt="Foto do perfil">
+        <span id="nomeUsuarioLogado"></span>
+    </li>
+
+    <li id="linkPerfil" style="display:none">
+        <a onclick="mostrar('perfil')">Meu perfil</a>
+    </li>
 
     <li id="linkLogin">
         <a onclick="mostrar('login')">Entrar</a>
@@ -452,7 +486,7 @@
     </li>
 
     <li>
-        <a onclick="mostrar('cadastro')">
+        <a href="#cadastro" onclick="mostrar('cadastro'); return false;">
             Cadastre-se
         </a>
     </li>
@@ -525,9 +559,9 @@
 
                 <input type="email" id="cadastroContato" name="contato" placeholder="nome@gmail.com" maxlength="254" pattern="^[^\s@]+@gmail\.com$" required>
 
-                <input type="password" id="cadastroSenha" name="senha" placeholder="Senha" minlength="8" maxlength="72" required>
+                <input type="password" id="cadastroSenha" name="senha" placeholder="Senha" aria-label="Senha do cadastro" minlength="8" maxlength="72" required>
 
-                <input type="password" id="cadastroConfirmacao" name="confirmacao" placeholder="Confirme a senha" minlength="8" maxlength="72" required>
+                <input type="password" id="cadastroConfirmacao" name="confirmacao" placeholder="Confirme a senha" aria-label="Confirme a senha" minlength="8" maxlength="72" required>
 
                 <input type="text" id="cadastroEndereco" name="endereco" placeholder="Cidade / endereço" maxlength="200">
 
@@ -551,11 +585,25 @@
         </div>
         <form id="formLogin">
             <input type="email" id="loginContato" name="contato" placeholder="nome@gmail.com" maxlength="254" pattern="^[^\s@]+@gmail\.com$" required>
-            <input type="password" id="loginSenha" name="senha" placeholder="Senha" minlength="8" maxlength="72" required>
+            <input type="password" id="loginSenha" name="senha" placeholder="Senha" aria-label="Senha do login" minlength="8" maxlength="72" required>
             <p id="erroLogin" role="alert"></p>
             <button type="submit">Entrar</button>
         </form>
     </section>
+
+<section id="perfil">
+    <div class="navegacao-secao">
+        <button type="button" onclick="voltar()">Voltar</button>
+    </div>
+    <h2>Meu perfil</h2>
+    <form id="formImagem">
+        <img id="avatarPerfil" class="avatar-perfil" src="placeholder.jpg" alt="Pré-visualização da foto do perfil">
+        <p>Escolha uma imagem JPEG, PNG ou GIF de até 2 MB.</p>
+        <input id="arquivoImagem" type="file" name="imagem" accept="image/jpeg,image/png,image/gif" required>
+        <p id="erroImagem" role="alert" hidden></p>
+        <button type="submit">Enviar foto</button>
+    </form>
+</section>
 
 <section id="painelAdmin">
 
@@ -866,7 +914,7 @@
     </footer>
 
 
-    <script src="app.js?v=4"></script>
+    <script type="module" src="app.js?v=6"></script>
 
 </body>
 </html>
